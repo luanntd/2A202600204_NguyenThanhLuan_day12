@@ -15,6 +15,8 @@ Kết hợp TẤT CẢ những gì đã học trong 1 project hoàn chỉnh.
 - [x] Config từ environment variables
 - [x] Structured logging
 - [x] Graceful shutdown
+- [x] Redis-backed stateless conversation history
+- [x] JWT endpoint (bonus)
 - [x] Public URL ready (Railway / Render config)
 
 ---
@@ -57,7 +59,34 @@ API_KEY=$(grep AGENT_API_KEY .env | cut -d= -f2)
 curl -H "X-API-Key: $API_KEY" \
      -X POST http://localhost/ask \
      -H "Content-Type: application/json" \
-     -d '{"question": "What is deployment?"}'
+     -d '{"user_id": "test-user", "question": "What is deployment?"}'
+
+# 5. Test conversation history
+curl -H "X-API-Key: $API_KEY" \
+     -X POST http://localhost/ask \
+     -H "Content-Type: application/json" \
+     -d '{"user_id": "alice", "question": "My name is Alice"}'
+
+curl -H "X-API-Key: $API_KEY" \
+     -X POST http://localhost/ask \
+     -H "Content-Type: application/json" \
+     -d '{"user_id": "alice", "question": "What is my name?"}'
+```
+
+### Bonus JWT
+
+```bash
+# Get token
+curl -X POST http://localhost/token \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "secret"}'
+
+# Use token
+TOKEN="<paste-token>"
+curl -X POST http://localhost/ask \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "jwt-user", "question": "hello"}'
 ```
 
 ---
@@ -98,3 +127,9 @@ python check_production_ready.py
 ```
 
 Script này kiểm tra tất cả items trong checklist và báo cáo những gì còn thiếu.
+
+## Notes quan trọng
+
+- `/ask` yêu cầu `user_id` trong payload để rate limit + budget + history hoạt động theo từng user.
+- Rate limit mặc định: `10 req/min` mỗi user (`RATE_LIMIT_PER_MINUTE`).
+- Cost guard mặc định: `$10/tháng/user` (`MONTHLY_BUDGET_USD`).
